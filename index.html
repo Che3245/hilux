@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4x4_Drive_Protocol</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Playfair+Display:italic,wght@700&display=swap');
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0d0d0d;
+            color: #ff9d00;
+            /* Amber/Dashboard Color */
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 3s ease;
+        }
+
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .terminal-text {
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: #ff9d00;
+            text-shadow: 0 0 5px rgba(255, 157, 0, 0.5);
+        }
+
+        .action-btn {
+            background: transparent;
+            border: 2px solid #ff9d00;
+            color: #ff9d00;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-family: 'Syncopate', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: #ff9d00;
+            color: #000;
+            box-shadow: 0 0 30px #ff9d00;
+        }
+
+        #secret-content {
+            display: none;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 1.5s ease;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        h1 {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .dash-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            margin: 20px auto;
+            border: 1px solid #444;
+            padding: 15px;
+            background: rgba(20, 20, 20, 0.8);
+        }
+
+        .stat {
+            font-size: 0.8rem;
+            text-align: left;
+        }
+
+        .val {
+            color: #fff;
+            float: right;
+            font-weight: bold;
+        }
+
+        /* Button Logic Styles */
+        .choice-container {
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .choice-btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border: 2px solid #ff9d00;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Syncopate', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn-yes {
+            background-color: #ff9d00;
+            color: #000;
+            box-shadow: 0 0 15px #ff9d00;
+        }
+
+        .btn-yes:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 40px #ff9d00;
+            background-color: #fff;
+            border-color: #fff;
+        }
+
+        .btn-no {
+            background-color: transparent;
+            border: 2px solid #ff3e3e;
+            color: #ff3e3e;
+            box-shadow: 0 0 10px rgba(255, 62, 62, 0.3);
+            position: relative;
+        }
+
+        /* Floral Text CSS */
+        .floral-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: #00ff41;
+            text-shadow: 0 0 20px #00ff41;
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        .floral-char {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: textFadeIn 0.8s forwards;
+            position: relative;
+        }
+
+        @keyframes textFadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .flower-decoration {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .floral-text {
+                font-size: 2rem;
+            }
+
+            .dash-stats {
+                grid-template-columns: 1fr;
+                max-width: 90%;
+            }
+
+            .action-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+
+            .choice-btn {
+                padding: 10px 20px;
+                font-size: 1rem;
+            }
+
+            #secret-content {
+                width: 95%;
+                padding: 10px;
+            }
+
+            #car-canvas {
+                height: 200px !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="canvas"></canvas>
+    <canvas id="car-canvas"
+        style="position: absolute; bottom: 0; left: 0; width: 100%; height: 300px; z-index: 5; opacity: 1; transition: opacity 1s;"></canvas>
+
+    <div id="ui-layer">
+        <div id="terminal-init">
+
+            <p class="terminal-text" id="typewriter"></p>
+            <button class="action-btn" onclick="engage4WD()">ENGAGE 4L DRIVE</button>
+        </div>
+
+        <div id="secret-content">
+            <h2 id="greeting-msg"
+                style="color: #ff9d00; font-family: 'Syncopate', sans-serif; margin-bottom: 10px; font-size: 1.5rem;">
+                DEAR LIDIYA</h2>
+            <h1>UNSTOPPABLE DRIVE</h1>
+            <div class="dash-stats">
+                <div class="stat">MODE: <span class="val">4x4 LOW-RANGE</span></div>
+                <div class="stat">DIFF-LOCK: <span class="val">ENGAGED</span></div>
+                <div class="stat">ORIGIN: <span class="val">UoM</span></div>
+                <div class="stat">DESTINATION: <span class="val">IIT</span></div>
+            </div>
+            <p style="color: #bbb; line-height: 1.6;">
+                Calculated the terrain between UoM and IIT.<br>
+                The incline is steep, but with <strong>4x4 logic</strong>,<br>
+                every path leads straight to you.
+            </p>
+            </p>
+            <div class="floral-text" id="question-msg"
+                style="margin-top: 30px; font-family: 'Playfair Display', serif;"></div>
+
+            <!-- Hidden H2 for status reference if needed, or we just rely on floral text now -->
+            <h2 id="status-msg" style="display:none;"></h2>
+
+            <div class="choice-container" id="choices">
+                <button class="choice-btn btn-yes" onclick="handleYes()">YES</button>
+                <button class="choice-btn btn-no" id="btn-no" onmouseover="moveNoButton()"
+                    ontouchstart="moveNoButton()">NO</button>
+            </div>
+            <div class="floral-text" id="final-msg"></div>
+        </div>
+    </div>
+
+    <!-- SVG Definitions for Flowers -->
+    <svg style="display: none;">
+        <symbol id="flower-1" viewBox="0 0 100 100">
+            <path d="M50 50 C20 20 20 0 50 0 C80 0 80 20 50 50 Z" fill="#FF6B6B" />
+            <path d="M50 50 C80 20 100 20 100 50 C100 80 80 80 50 50 Z" fill="#FF8E8E" />
+            <path d="M50 50 C80 80 80 100 50 100 C20 100 20 80 50 50 Z" fill="#FF6B6B" />
+            <path d="M50 50 C20 80 0 80 0 50 C0 20 20 20 50 50 Z" fill="#FF8E8E" />
+            <circle cx="50" cy="50" r="10" fill="#FFE66D" />
+        </symbol>
+        <symbol id="flower-2" viewBox="0 0 100 100">
+            <path d="M50 50 Q30 0 50 0 Q70 0 50 50" fill="#4ECDC4" />
+            <path d="M50 50 Q100 30 100 50 Q100 70 50 50" fill="#45B7D1" />
+            <path d="M50 50 Q70 100 50 100 Q30 100 50 50" fill="#4ECDC4" />
+            <path d="M50 50 Q0 70 0 50 Q0 30 50 50" fill="#45B7D1" />
+            <circle cx="50" cy="50" r="15" fill="#FFEEAD" />
+        </symbol>
+    </svg>
+
+    <script>
+        const text = "> Checking Terrain: ROUGH\n> Shifting to Low Range...\n> Locking Rear Differential...";
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                document.getElementById("typewriter").innerHTML += text.charAt(i);
+                i++;
+                setTimeout(type, 60);
+            }
+        }
+        type();
+
+        function engage4WD() {
+            document.getElementById('terminal-init').style.display = 'none';
+            document.getElementById('canvas').style.opacity = '0.4';
+            const secret = document.getElementById('secret-content');
+            secret.style.display = 'block';
+
+            // Dust/Star effect
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            let particles = [];
+            for (let i = 0; i < 150; i++) particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: Math.random() * 2,
+                speed: Math.random() * 2 + 0.5
+            });
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach(p => {
+                    ctx.beginPath();
+                    ctx.fillStyle = "#ff9d00"; // Amber dust
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    p.y += p.speed;
+                    if (p.y > canvas.height) {
+                        p.y = 0;
+                        p.x = Math.random() * canvas.width;
+                    }
+                });
+
+                // Add BRIGHT RED hearts layer
+                ctx.font = "20px Arial";
+                ctx.fillStyle = "#ff0000"; // Bright Red
+                particles.forEach((p, index) => {
+                    if (index % 5 === 0) {
+                        ctx.fillText("❤", p.x, p.y - 20);
+                    }
+                });
+
+                requestAnimationFrame(draw);
+            }
+            draw();
+
+            setTimeout(() => {
+                secret.style.opacity = '1';
+                secret.style.transform = 'scale(1)';
+                createFloralText("Will you be my Valentine?", 'question-msg');
+
+                // Hide Car Animation (Only for loading screen)
+                document.getElementById('car-canvas').style.opacity = '0';
+            }, 100);
+        }
+
+        // Floral Text Logic
+        // Floral Text Logic
+        function createFloralText(message, containerId = 'final-msg') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+
+            message.split('').forEach((char, index) => {
+                const span = document.createElement('span');
+                span.textContent = char === ' ' ? '\u00A0' : char;
+                span.className = 'floral-char';
+                span.style.animationDelay = `${index * 0.1}s`;
+
+                // Add flowers to letters (not spaces)
+                if (char !== ' ') {
+                    const numFlowers = Math.floor(Math.random() * 2) + 1; // 1-2 flowers per char
+                    for (let j = 0; j < numFlowers; j++) {
+                        const flower = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                        flower.classList.add('flower-decoration');
+                        const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+
+                        // Random flower type
+                        const type = Math.random() > 0.5 ? '#flower-1' : '#flower-2';
+                        use.setAttributeNS("http://www.w3.org/1999/xlink", "href", type);
+
+                        flower.appendChild(use);
+
+                        // Random position around the letter
+                        const top = Math.random() * 80 - 10 + '%';
+                        const left = Math.random() * 100 - 20 + '%';
+                        const scale = Math.random() * 0.4 + 0.3;
+                        const delay = (index * 0.1) + Math.random() * 0.5 + 0.2; // Delay after char appears
+
+                        flower.style.top = top;
+                        flower.style.left = left;
+                        flower.style.transform = `scale(0)`; // Start hidden
+
+                        // Animate via JS to handle dynamic delay
+                        setTimeout(() => {
+                            flower.style.transition = "transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                            flower.style.transform = `scale(${scale}) rotate(${Math.random() * 360}deg)`;
+                        }, delay * 1000);
+
+                        span.appendChild(flower);
+                    }
+                }
+                container.appendChild(span);
+            });
+        }
+
+        // Button Interactions
+        function moveNoButton() {
+            const btnNo = document.getElementById('btn-no');
+
+            const maxWidth = window.innerWidth - btnNo.offsetWidth - 20;
+            const maxHeight = window.innerHeight - btnNo.offsetHeight - 20;
+
+            const randomX = Math.random() * maxWidth;
+            const randomY = Math.random() * maxHeight;
+
+            btnNo.style.position = 'fixed';
+            btnNo.style.left = randomX + 'px';
+            btnNo.style.top = randomY + 'px';
+        }
+
+        function handleYes() {
+            const choices = document.getElementById('choices');
+            choices.style.display = 'none';
+
+            // Just update the header, let createFloralText handle the "I Love You"
+            const secret = document.getElementById('secret-content');
+
+            // We want to keep the structure but hide/replace part of it, 
+            // or just append the success message.
+            // Let's clear the middle stats to reduce clutter and show the big message.
+
+            // Find stats and hide them
+            const stats = document.querySelector('.dash-stats');
+            if (stats) stats.style.display = 'none';
+
+            const p = document.querySelector('p');
+            if (p) p.style.display = 'none';
+
+            // Show status
+            const h2 = document.getElementById('status-msg');
+            if (h2) {
+                h2.style.display = 'block';
+                h2.innerHTML = "DIFF-LOCK SECURED! 🧡";
+                h2.style.color = "#00ff41";
+                h2.style.fontFamily = "'Syncopate', sans-serif";
+                h2.style.marginTop = "30px";
+            }
+
+            // Clear the question message to avoid clutter
+            const qMsg = document.getElementById('question-msg');
+            if (qMsg) qMsg.style.display = 'none';
+
+            // Hide the initial greeting
+            const greeting = document.getElementById('greeting-msg');
+            if (greeting) greeting.style.display = 'none';
+
+            createFloralText("I Love You Lidiya", 'final-msg');
+
+            // Intensify hearts
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            let hearts = [];
+            for (let i = 0; i < 200; i++) {
+                hearts.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 30 + 10,
+                    speed: Math.random() * 4 + 2
+                });
+            }
+
+            // Simple overlay animation function
+            function animateLove() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                hearts.forEach(h => {
+                    ctx.font = h.size + "px Arial";
+                    ctx.fillStyle = "#ff0000"; // Bright Red
+                    ctx.fillText("❤", h.x, h.y);
+                    h.y -= h.speed;
+                    if (h.y < -30) {
+                        h.y = canvas.height + 30;
+                        h.x = Math.random() * canvas.width;
+                    }
+                });
+                requestAnimationFrame(animateLove);
+            }
+            animateLove();
+        }
+
+        // 4x4 Car Animation
+        function startCarAnimation() {
+            const canvas = document.getElementById('car-canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set resolution logic
+            let scale = 1;
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerWidth < 768 ? 200 : 300;
+                scale = window.innerWidth < 768 ? 0.6 : 1;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            let offset = 0;
+            const groundHeight = 50; // Reduced base height
+
+            // Terrain Generation
+            function getTerrainHeight(x) {
+                // Combine sine waves for rough terrain
+                return Math.sin((x + offset) * 0.01) * 20 +
+                    Math.sin((x + offset) * 0.03) * 10 +
+                    Math.sin((x + offset) * 0.1) * 2;
+            }
+
+            function drawCar() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw Terrain
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height);
+                for (let x = 0; x <= canvas.width; x += 5) {
+                    const y = canvas.height - groundHeight - getTerrainHeight(x);
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.fillStyle = '#111';
+                ctx.fill();
+                ctx.strokeStyle = '#ff9d00';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Car physics connection points
+                const carX = canvas.width / 2 - 50;
+                const wheelSpacing = 120;
+
+                // Sample terrain under wheels
+                const y1 = canvas.height - groundHeight - getTerrainHeight(carX);
+                const y2 = canvas.height - groundHeight - getTerrainHeight(carX + wheelSpacing);
+
+                // Calculate car angle/height based on wheels
+                const angle = Math.atan2(y2 - y1, wheelSpacing);
+                const midY = (y1 + y2) / 2 - 40 * scale; // Lift body scaled
+
+                ctx.save();
+                // Apply global scale for drawing
+                ctx.translate(carX + wheelSpacing / 2, midY); // Pivot around center
+                ctx.scale(scale, scale);
+                ctx.rotate(angle);
+                ctx.translate(-(carX + wheelSpacing / 2), -midY); // Go back
+
+                ctx.translate(carX + wheelSpacing / 2, midY);
+                ctx.rotate(angle);
+
+                // Draw Car Body
+                ctx.fillStyle = '#ff9d00';
+                ctx.beginPath();
+                ctx.roundRect(-70, -40, 140, 50, 5); // Main body
+                ctx.roundRect(-50, -70, 90, 40, 5);  // Cabin
+                ctx.fill();
+
+                // Window
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.roundRect(-40, -60, 70, 25, 3);
+                ctx.fill();
+
+                // Decor
+                ctx.fillStyle = '#fff';
+                ctx.fillText("LIDIYA", -30, -15);
+
+                ctx.restore();
+
+                // Draw Wheels
+                drawWheel(carX, y1, offset);
+                drawWheel(carX + wheelSpacing, y2, offset);
+
+                offset += 5; // Move terrain
+                requestAnimationFrame(drawCar);
+            }
+
+            function drawWheel(x, y, rotation) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rotation * 0.1);
+
+                // Tire
+                ctx.beginPath();
+                ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                ctx.fillStyle = '#222';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                // Rim
+                ctx.beginPath();
+                ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                ctx.fillStyle = '#888';
+                ctx.fill();
+
+                // Spokes
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-10, 0); ctx.lineTo(10, 0);
+                ctx.moveTo(0, -10); ctx.lineTo(0, 10);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            drawCar();
+        }
+
+        // Start immediately
+        startCarAnimation();
+    </script>
+</body>
+
+</html>
